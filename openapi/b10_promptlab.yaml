@@ -1,0 +1,35 @@
+openapi: 3.0.0
+info:
+  title: "🧪 promptlab"
+  version: 0.1.0
+paths:
+  /api/prompts:
+    post:
+      summary: create
+      responses:
+        "200":
+          description: ok
+  /api/prompts:
+    get:
+      summary: list
+      responses:
+        "200":
+          description: ok
+  /api/prompts/<id>/versions:
+    post:
+      summary: new version
+      responses:
+        "200":
+          description: ok
+  /api/evals:
+    post:
+      summary: run eval
+      responses:
+        "200":
+          description: ok
+  /api/evals/<id>:
+    get:
+      summary: results
+      responses:
+        "200":
+          description: ok

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}promptlab · {{ prompt.name }}{% endblock %}
+{% block brand %}🧪 promptlab{% endblock %}
+{% block nav %}
+<a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Prompts</a>
+<a href="{{ url_for('runs') }}"{% if request.endpoint in ('runs','run_detail') %} class="on"{% endif %}>Eval runs</a>
+<a href="{{ url_for('lab.list_prompts') }}">Prompts JSON</a>
+<a href="{{ url_for('health') }}">Health</a>
+{% endblock %}
+{% block content %}
+<h1>{{ prompt.name }}<span class="mono" style="color:var(--dim)"> · v{{ prompt.current_version }}</span></h1>
+<div class="panel">
+  <div class="hd">Save a new version</div>
+  <div class="bd">
+    <form method="post" action="{{ url_for('version_create', pid=prompt.id) }}">
+      <textarea name="template" placeholder="Summarize the following in {max_words} words:
+{text}">{{ latest.template if latest else '' }}</textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" type="submit">Save as v{{ prompt.current_version + 1 }}</button>
+        <span class="note">posts to <span class="mono">/prompts/{{ prompt.id }}/versions</span> — the JSON twin is <span class="mono">POST /api/prompts/{{ prompt.id }}/versions</span></span>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="panel">
+  <div class="hd">Version history</div>
+  <div class="bd">
+  {% if versions %}
+    <table>
+      <thead><tr><th>version</th><th>created</th><th>template</th></tr></thead>
+      <tbody>
+      {% for v in versions %}
+        <tr>
+          <td class="mono">v{{ v.version }}</td>
+          <td class="mono">{{ v.created_at }}</td>
+          <td><div class="code">{{ v.template }}</div></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No versions stored for this prompt.</div>
+  {% endif %}
+  </div>
+</div>
+<div class="panel">
+  <div class="hd">Run an eval</div>
+  <div class="bd">
+    <form method="post" action="{{ url_for('eval_queue', pid=prompt.id) }}">
+      <div class="row">
+        <input name="models" placeholder="gpt-4o, claude-3-5-sonnet" style="min-width:260px">
+        <input name="cases" type="number" min="1" placeholder="5">
+        <button class="btn q" type="submit">Queue eval</button>
+      </div>
+      <p class="note" style="margin-top:10px">Queueing only writes an <span class="mono">eval_runs</span> row with
+        status <span class="mono">queued</span>. Real execution is <span class="mono">POST {{ url_for('lab.start_eval') }}</span>
+        (JSON), because <span class="mono">lab.evals.run_eval</span> makes outbound HTTP calls to the model APIs —
+        this page never blocks on the network.</p>
+    </form>
+  </div>
+</div>
+{% if runs %}
+<div class="panel">
+  <div class="hd">Runs for this prompt</div>
+  <div class="bd">
+    <table>
+      <thead><tr><th>run</th><th>version</th><th>status</th><th>started</th><th></th></tr></thead>
+      <tbody>
+      {% for r in runs %}
+        <tr>
+          <td class="mono">#{{ r.id }}</td>
+          <td class="mono">v{{ r.version }}</td>
+          <td><span class="tag">{{ r.status }}</span></td>
+          <td class="mono">{{ r.started_at }}</td>
+          <td><a href="{{ url_for('run_detail', rid=r.id) }}">detail</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

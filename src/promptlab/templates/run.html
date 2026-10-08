@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}promptlab · run {{ run.id }}{% endblock %}
+{% block brand %}🧪 promptlab{% endblock %}
+{% block nav %}
+<a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Prompts</a>
+<a href="{{ url_for('runs') }}"{% if request.endpoint in ('runs','run_detail') %} class="on"{% endif %}>Eval runs</a>
+<a href="{{ url_for('lab.eval_result', rid=run.id) }}">Prompts JSON</a>
+<a href="{{ url_for('health') }}">Health</a>
+{% endblock %}
+{% block content %}
+<h1>Eval run #{{ run.id }}</h1>
+<div class="grid">
+  <div class="stat"><div class="k">prompt</div><div class="v">{{ run.prompt_id }}</div></div>
+  <div class="stat"><div class="k">version</div><div class="v">v{{ run.version }}</div></div>
+  <div class="stat"><div class="k">status</div><div class="v">{{ run.status }}</div></div>
+  <div class="stat"><div class="k">results</div><div class="v">{{ results|length }}</div></div>
+</div>
+{% if by_model %}
+<div class="panel">
+  <div class="hd">Per model</div>
+  <div class="bd">
+    <table>
+      <thead><tr><th>model</th><th>pass</th><th>total</th><th>pass rate</th><th>cost</th><th>max latency ms</th></tr></thead>
+      <tbody>
+      {% for model, agg in by_model.items() %}
+        <tr>
+          <td class="mono">{{ model }}</td>
+          <td class="mono">{{ agg.pass }}</td>
+          <td class="mono">{{ agg.total }}</td>
+          <td class="mono">{% if agg.total %}{{ (agg.pass / agg.total * 100)|round(1) }}%{% else %}—{% endif %}</td>
+          <td class="mono">{{ agg.cost|round(4) }}</td>
+          <td class="mono">{{ agg.latency|round(1) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+<div class="panel">
+  <div class="hd">Raw results</div>
+  <div class="bd">
+  {% if results %}
+    <table>
+      <thead><tr><th>case</th><th>model</th><th>passed</th><th>latency</th><th>output</th></tr></thead>
+      <tbody>
+      {% for r in results %}
+        <tr>
+          <td class="mono">{{ r.case_id }}</td>
+          <td class="mono">{{ r.model }}</td>
+          <td>{% if r.passed %}<span class="tag on">pass</span>{% else %}<span class="tag no">fail</span>{% endif %}</td>
+          <td class="mono">{{ r.latency_ms|round(1) }}</td>
+          <td><div class="code">{{ r.output }}</div></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No results stored for this run.{% if run.status == 'queued' %} This run was queued from the editor and has not been executed — use <span class="mono">POST {{ url_for('lab.start_eval') }}</span> with a JSON body.{% endif %}</div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}

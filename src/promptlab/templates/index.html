@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}promptlab · prompts{% endblock %}
+{% block brand %}🧪 promptlab{% endblock %}
+{% block nav %}
+<a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Prompts</a>
+<a href="{{ url_for('runs') }}"{% if request.endpoint in ('runs','run_detail') %} class="on"{% endif %}>Eval runs</a>
+<a href="{{ url_for('lab.list_prompts') }}">Prompts JSON</a>
+<a href="{{ url_for('health') }}">Health</a>
+{% endblock %}
+{% block content %}
+<h1>Prompts</h1>
+<div class="panel">
+  <div class="hd">New prompt</div>
+  <div class="bd">
+    <form method="post" action="{{ url_for('prompt_create') }}">
+      <div class="row">
+        <input name="name" placeholder="summarize" required>
+        <input name="vars" placeholder="max_words, text">
+        <button class="btn" type="submit">Create</button>
+      </div>
+      <textarea name="template" style="margin-top:10px" placeholder="Summarize the following in {max_words} words:
+{text}"></textarea>
+      <p class="note" style="margin-top:10px">Creates v1. Placeholders are plain <span class="mono">{{ '{' }}name{{ '}' }}</span>
+        tokens rendered by <span class="mono">lab.prompts.render</span>.</p>
+    </form>
+  </div>
+</div>
+<div class="panel">
+  <div class="hd">Stored prompts</div>
+  <div class="bd">
+  {% if prompts %}
+    <table>
+      <thead><tr><th>id</th><th>name</th><th>version</th><th>versions stored</th><th>created</th><th></th></tr></thead>
+      <tbody>
+      {% for p in prompts %}
+        <tr>
+          <td class="mono">{{ p.id }}</td>
+          <td>{{ p.name }}</td>
+          <td class="mono">v{{ p.current_version }}</td>
+          <td class="mono">{{ p.current_version }}</td>
+          <td class="mono">{{ p.created_at }}</td>
+          <td><a href="{{ url_for('prompt_editor', pid=p.id) }}">edit</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No prompts stored yet. Create one above, or <span class="mono">POST <a href="{{ url_for('lab.add_prompt') }}">/api/prompts</a></span> with JSON.</div>
+  {% endif %}
+  </div>
+</div>
+<div class="panel">
+  <div class="hd">Recent eval runs</div>
+  <div class="bd">
+  {% if runs %}
+    <table>
+      <thead><tr><th>run</th><th>prompt</th><th>version</th><th>models</th><th>status</th><th>started</th><th></th></tr></thead>
+      <tbody>
+      {% for r in runs %}
+        <tr>
+          <td class="mono">#{{ r.id }}</td>
+          <td class="mono">{{ r.prompt_id }}</td>
+          <td class="mono">v{{ r.version }}</td>
+          <td class="mono">{{ r.models_json }}</td>
+          <td><span class="tag">{{ r.status }}</span></td>
+          <td class="mono">{{ r.started_at }}</td>
+          <td><a href="{{ url_for('run_detail', rid=r.id) }}">detail</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No eval runs recorded.</div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}
