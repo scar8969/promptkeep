@@ -66,6 +66,7 @@ Every route below is in [`openapi/promptkeep.yaml`](openapi/promptkeep.yaml) and
 | Method | Path | What it does |
 | --- | --- | --- |
 | `GET` | `/api/prompts` | list |
+| `POST` | `/api/prompts` | create |
 | `POST` | `/api/prompts/<id>/versions` | new version |
 | `POST` | `/api/evals` | run eval |
 | `GET` | `/api/evals/<id>` | results |
@@ -101,7 +102,7 @@ These numbers were produced on this checkout by `pytest --cov` and by booting `w
 
 | Signal | Value |
 | --- | --- |
-| Tests | **26 / 26 passed** (3.5 s, exit 0) |
+| Tests | **26 / 26 passed** (2.2 s, exit 0) |
 | Line coverage | **68.7%** — 448 of 630 statements |
 | Source | 16 files / 1,384 lines |
 | Test code | 4 files / 242 lines |
