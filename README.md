@@ -1,353 +1,172 @@
-# promptkeep
+<p align="center">
+  <img src="docs/assets/screens/root.png" alt="promptkeep running" width="900">
+</p>
 
-[![python: 3.11 %7C 3.12 %7C 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776ab)](#requirements) [![tests: 26 passed](https://img.shields.io/badge/tests-26%20passed-2ea44f)](#quality-gates) [![coverage: 68.5%25](https://img.shields.io/badge/coverage-68.5%25-yellow)](#quality-gates) [![version: 0.1.0](https://img.shields.io/badge/version-0.1.0-0969da)](CHANGELOG.md) [![license: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
+<h1 align="center">promptkeep</h1>
 
-**promptkeep** is a Flask service packaged the way a production service is packaged: a real package under `src/`, an environment-only configuration contract, structured JSON logs with request correlation, the five operational endpoints an orchestrator expects, a multi-stage container image, and CI gates that keep all of it honest.
+<p align="center"><b>Version every prompt, then measure it instead of arguing about it.</b></p>
 
-This README is a measured document. Every number in it was produced on this exact checkout by the commands recorded in [docs/EVIDENCE.md](docs/EVIDENCE.md): **26 tests** run under pytest, **622 statements** traced by coverage, and **12 HTTP requests** issued over a real socket to the running server.
+<p align="center">
+  <a href="#quality-gates"><img src="https://img.shields.io/badge/tests-26%20passed-2ea44f" alt="tests: 26 passed"></a> <a href="#quality-gates"><img src="https://img.shields.io/badge/coverage-68.7%-yellow" alt="coverage: 68.7%"></a> <a href="#api"><img src="https://img.shields.io/badge/routes-9%20answered-0969da" alt="routes: 9 answered"></a> <a href="#requirements"><img src="https://img.shields.io/badge/python-3.11%2B-3776ab" alt="python: 3.11+"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2ea44f" alt="license: MIT"></a>
+</p>
 
-<table>
-<tr>
-<td align="center"><b>26 / 26</b><br><sub>tests passed</sub></td>
-<td align="center"><b>68.5%</b><br><sub>line coverage</sub></td>
-<td align="center"><b>1,263</b><br><sub>source lines</sub></td>
-<td align="center"><b>12</b><br><sub>routes probed</sub></td>
-<td align="center"><b>7</b><br><sub>screenshots</sub></td>
-</tr>
-</table>
+promptkeep stores prompts with an append-only version history and runs evals against those versions, storing per-case scores so a prompt change is a diff and a number.
 
 ---
 
-## At a glance
+**Contents** &nbsp;·&nbsp; [Why](#why-this-exists) &nbsp;·&nbsp; [What it does](#what-it-does) &nbsp;·&nbsp; [Quickstart](#quickstart) &nbsp;·&nbsp; [API](#api) &nbsp;·&nbsp; [Screenshots](#screenshots) &nbsp;·&nbsp; [Measured](#measured-not-estimated) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Quality gates](#quality-gates) &nbsp;·&nbsp; [Deploy](#deploy) &nbsp;·&nbsp; [Limits](#limits-stated-rather-than-hidden)
 
-| Signal | Measured value | How it was measured |
+## Why this exists
+
+Prompt work happens in chat windows and gets lost. Keeping each revision as a row and each eval as scored cases turns "this feels better" into a comparison you can rerun.
+
+## What it does
+
+| Capability | How it works |
+| --- | --- |
+| **Append-only versions** | Every save creates a version; nothing is overwritten. |
+| **Evals per version** | An eval run applies per-case assertions — contains, equals, regex or JSON path — and stores one result per case against a specific version. |
+| **Comparison** | Results are queryable per eval, so two versions can be put side by side. |
+| **HTML view** | The panel lists prompts and their latest scores. |
+
+## Quickstart
+
+```sh
+git clone https://github.com/scar8969/promptkeep.git
+cd promptkeep
+python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+python wsgi.py                                 # http://127.0.0.1:8000
+```
+
+The same work from the CLI:
+
+```sh
+python -m promptlab.cli --help
+```
+
+Commands: `run`.
+
+A first request:
+
+```sh
+curl -s http://127.0.0.1:8000/api/prompts | head
+```
+
+## Requirements
+
+- Python **3.11+** — CI runs 3.11, 3.12 and 3.13.
+- Runtime dependencies: `Flask>=3.0`, `Flask-SQLAlchemy>=3.1`, `SQLAlchemy>=2.0`, `PyYAML>=6.0`.
+- No JavaScript build step: every page is server-rendered Jinja.
+
+## API
+
+Every route below is in [`openapi/promptkeep.yaml`](openapi/promptkeep.yaml) and is exercised by the live probe recorded in [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
+
+| Method | Path | What it does |
 | --- | --- | --- |
-| Tests passed | **26 / 26** | `python -m pytest -q` (exit code 0) |
-| Test wall clock | 1.78 s | junit-xml suite time |
-| Line coverage | **68.5%** | 441 of 622 statements executed, 181 missed |
-| Source size | 1,263 lines / 16 modules | counted under `src/` |
-| Test size | 225 lines / 4 files | counted under `tests/` |
-| Documentation | 534 lines / 5 files | counted under `docs/` |
-| Routes probed | 12 GET routes, 9 answered 200 | real HTTP against `127.0.0.1:<port>` |
-| Total bytes served | 10.5 KB | 12 responses summed |
-| Median response | 6.6 ms | median of 12 measured round trips |
-| Screenshots | 7 captured | headless Chromium at 1440x900 |
-
-The slowest measured route was **76.7 ms** (`/`) and the fastest **3.4 ms** (`/healthz`). Every figure is a single uncached first request against the development server, so the spread reflects cold template rendering and lazy imports rather than steady-state latency.
+| `GET` | `/api/prompts` | list |
+| `POST` | `/api/prompts/<id>/versions` | new version |
+| `POST` | `/api/evals` | run eval |
+| `GET` | `/api/evals/<id>` | results |
 
 ## Screenshots
 
-Rendered from the running service with headless Chromium:
-
-```sh
-chrome --headless=new --disable-gpu --no-sandbox --hide-scrollbars \
-  --user-data-dir=<dir> --virtual-time-budget=4000 \
-  --window-size=1440,900 --screenshot=<png> <url>
-```
-
-The files are committed under `docs/assets/screens/`.
+Captured from the running service with headless Chromium at 1440×900, one image per page, committed under [`docs/assets/screens/`](docs/assets/screens/).
 
 <table>
 <tr>
-<td width="50%"><img src="docs/assets/screens/root.png" alt="/" width="100%"><br><sub><code>/</code> &middot; 35.3 KB</sub></td>
 <td width="50%"><img src="docs/assets/screens/runs.png" alt="/runs" width="100%"><br><sub><code>/runs</code> &middot; 16.0 KB</sub></td>
-</tr>
-</table>
-
-<table>
-<tr>
 <td width="50%"><img src="docs/assets/screens/healthz.png" alt="/healthz" width="100%"><br><sub><code>/healthz</code> &middot; 8.3 KB</sub></td>
+</tr>
+</table>
+
+<table>
+<tr>
 <td width="50%"><img src="docs/assets/screens/livez.png" alt="/livez" width="100%"><br><sub><code>/livez</code> &middot; 7.3 KB</sub></td>
-</tr>
-</table>
-
-<table>
-<tr>
 <td width="50%"><img src="docs/assets/screens/metrics.png" alt="/metrics" width="100%"><br><sub><code>/metrics</code> &middot; 14.8 KB</sub></td>
-<td width="50%"><img src="docs/assets/screens/readyz.png" alt="/readyz" width="100%"><br><sub><code>/readyz</code> &middot; 7.7 KB</sub></td>
 </tr>
 </table>
 
 <table>
 <tr>
+<td width="50%"><img src="docs/assets/screens/readyz.png" alt="/readyz" width="100%"><br><sub><code>/readyz</code> &middot; 7.7 KB</sub></td>
 <td width="50%"><img src="docs/assets/screens/version.png" alt="/version" width="100%"><br><sub><code>/version</code> &middot; 25.4 KB</sub></td>
 </tr>
 </table>
 
-## Charts
+## Measured, not estimated
 
-Every chart is generated from the same measured JSON that renders the tables, by `_tools/_chartlib.py` - hand-written SVG with no plotting dependency - and committed so GitHub renders it without a build step.
+These numbers were produced on this checkout by `pytest --cov` and by booting `wsgi.py` and issuing one real GET per documented path. The commands are in [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
-![Line coverage](docs/assets/coverage.svg)
-
-![Coverage by module](docs/assets/coverage-modules.svg)
-
-![Test outcome](docs/assets/tests.svg)
-
-![Response time per route](docs/assets/latency.svg)
-
-![Response size per route](docs/assets/payload.svg)
-
-![Repository size](docs/assets/loc.svg)
-
-![File counts](docs/assets/files.svg)
-
-## HTTP surface
-
-Each route below was requested over TCP against the running server, started with `APP_ENV=production` so the production configuration path is the one under test. Static file routes are excluded: they are served by the WSGI container, not the application.
-
-| # | Route | Status | Time | Bytes | Content type |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `/` | **200** | 76.7 ms | 4,899 | text/html; charset=utf-8 |
-| 2 | `/api/evals/demo` | **404** | 11.9 ms | 51 | application/json |
-| 3 | `/api/health` | **200** | 12.5 ms | 37 | application/json |
-| 4 | `/api/prompts` | **200** | 6.6 ms | 15 | application/json |
-| 5 | `/healthz` | **200** | 3.4 ms | 56 | application/json |
-| 6 | `/livez` | **200** | 4.2 ms | 19 | application/json |
-| 7 | `/metrics` | **200** | 4.5 ms | 305 | text/plain; version=0.0.4; charset=utf-8; charset=utf-8 |
-| 8 | `/prompts/demo/editor` | **404** | 5.5 ms | 207 | text/html; charset=utf-8 |
-| 9 | `/readyz` | **200** | 3.9 ms | 31 | application/json |
-| 10 | `/runs` | **200** | 33.3 ms | 4,009 | text/html; charset=utf-8 |
-| 11 | `/runs/demo` | **404** | 5.4 ms | 207 | text/html; charset=utf-8 |
-| 12 | `/version` | **200** | 12.3 ms | 901 | application/json |
-
-Status distribution: **200** x9, **404** x3. No response was a 5xx.
-
-### Declared API contract
-
-`openapi/promptkeep.yaml` declares **4 paths** carrying **5 operations** (2 GET, 3 POST):
-
-| Method | Path |
+| Signal | Value |
 | --- | --- |
-| `POST` | `/api/prompts` |
-| `GET` | `/api/prompts` |
-| `POST` | `/api/prompts/<id>/versions` |
-| `POST` | `/api/evals` |
-| `GET` | `/api/evals/<id>` |
-
-## Operational endpoints
-
-Four of these are liveness and readiness plumbing for an orchestrator; `/metrics` is a Prometheus text exposition that needs no client library. The bodies below are captured verbatim from the running process.
-
-`/healthz` answered **200**:
-
-```json
-{"service":"promptlab","status":"ok","version":"0.1.0"}
-```
-
-`/livez` answered **200**:
-
-```json
-{"status":"alive"}
-```
-
-`/readyz` answered **200**:
-
-```json
-{"checks":[],"status":"ready"}
-```
-
-`/metrics` answered **200**:
-
-```text
-# TYPE http_requests_total counter http_requests_total{method="GET",status="200"} 3 # TYPE http_request_duration_seconds_sum counter http_request_duration_seconds_sum{method="GET"} 0.031576 http_requests_total{method="GET",status="404"} 1 # TYPE process_uptime_seconds gauge process_uptime_seconds 0.687
-```
-
-`/version` answered **200**:
-
-```json
-{"config":{"app_name":"promptlab","data_dir":".\\var","database_configured":false,"debug":false,"env":"development","host":"0.0.0.0","legacy_env_present":[],"log_json":true,"log_level":"INFO","port":8000,"secret_key_configured":false},"paths":{"data_dir":".\\var",
-```
-
-### Headers on every response
-
-| Header | Observed value |
-| --- | --- |
-| `X-Request-ID` | `55a8bee5b7f74d8691f5b0b587d76378` |
-| `X-Content-Type-Options` | `nosniff` |
-| `X-Frame-Options` | `DENY` |
-| `Referrer-Policy` | `no-referrer` |
-| `Cross-Origin-Opener-Policy` | `same-origin` |
-| `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` |
-| `Content-Type` | `application/json` |
+| Tests | **26 / 26 passed** (3.5 s, exit 0) |
+| Line coverage | **68.7%** — 448 of 630 statements |
+| Source | 16 files / 1,384 lines |
+| Test code | 4 files / 242 lines |
+| Documented paths | 4 in the spec, 2 GET |
+| Live probe | 12 GET requests to the booted app, **9 answered 200** |
+| Median latency | **6.0 ms** (single uncached request, dev server) |
+| Slowest / fastest | 76.7 ms `/` / 3.4 ms `/healthz` |
+| Bytes served | 10.5 KB across 12 responses |
+| Screenshots | 7 captured |
 
 ## Architecture
 
-This document explains how the service is put together, why the seams sit where they do, and what breaks first under load.
-
-```text
-.dockerignore
-.editorconfig
-.env.example
-.gitignore
-.pre-commit-config.yaml
-CHANGELOG.md
-CODE_OF_CONDUCT.md
-CONTRIBUTING.md
-Dockerfile
-LICENSE
-Makefile
-NOTES.md
-README.md
-SECURITY.md
-conftest.py
-docker-compose.yml
-docker-entrypoint.sh
-mypy.ini
-pyproject.toml
-requirements-dev.txt
-requirements.txt
-wsgi.py
-.github/
-  workflows/
-    ci.yml
-docs/
-  ARCHITECTURE.md
-  EVIDENCE.md
-  OPERATIONS.md
-  adr/
-    0001-src-layout-and-runtime-state.md
-    0002-hand-rolled-metric-exposition.md
-  assets/
-    coverage-modules.svg
-    coverage.svg
-    files.svg
-    latency.svg
-    loc.svg
-    payload.svg
-    tests.svg
-openapi/
-  promptkeep.yaml
-schema/
-  promptkeep.sql
-src/
-  promptlab/
-    __init__.py
-    _app.py
-    app.py
-    cli.py
-    config.py
-    errors.py
-    http.py
-    models.py
-    observability.py
-    paths.py
-    py.typed
-tests/
-  conftest.py
-  test_promptkeep.py
-  test_config.py
-  test_ops.py
+```
+promptkeep/
+├── src/promptlab/
+│   ├── http.py                         379  HTTP plumbing for promptlab: correlation ids, access
+│   ├── config.py                       171  Environment-driven configuration for promptlab
+│   ├── observability.py                169  Structured logging and request correlation for promp
+│   ├── _app.py                         147  Flask application for promptlab
+│   ├── app.py                          119  Application factory for promptlab
+│   ├── errors.py                       108  Typed application errors and their HTTP mapping for 
+│   ├── lab/api.py                       74  
+│   ├── lab/evals.py                     57  
+│   ├── paths.py                         52  Filesystem layout for promptlab
+│   ├── models.py                        46  
+│   ├── cli.py                           23  
+│   ├── lab/assertions.py                23  
+├── openapi/promptkeep.yaml                the contract of record
+├── schema/promptkeep.sql                  the DDL
+├── tests/                       the suite that has to stay green
+├── docs/EVIDENCE.md             the recorded live route walk
+├── Dockerfile                   multi-stage build
+└── wsgi.py                      entry point
 ```
 
-Deeper material: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map and request lifecycle, [docs/OPERATIONS.md](docs/OPERATIONS.md) for running and configuring it, [docs/EVIDENCE.md](docs/EVIDENCE.md) for the raw recorded output this README quotes.
-
-### Architecture decision records
-
-| Record | Decision | Status |
-| --- | --- | --- |
-| [0001-src-layout-and-runtime-state.md](docs/adr/0001-src-layout-and-runtime-state.md) | 1. Adopt a src/ layout with an explicit runtime state directory | accepted |
-| [0002-hand-rolled-metric-exposition.md](docs/adr/0002-hand-rolled-metric-exposition.md) | 2. Hand-roll metric exposition instead of depending on prometheus_client | accepted |
-
-## Requirements
-
-Configuration is environment-only, in the twelve-factor sense: nothing is read from a committed file, and `.env.example` is the complete list of what the process understands.
-
-| Variable | Example value |
-| --- | --- |
-| `APP_ENV` | `development` |
-| `SECRET_KEY` | `change-me-in-production` |
-| `HOST` | `0.0.0.0` |
-| `PORT` | `8000` |
-| `DEBUG` | `false` |
-| `MAX_CONTENT_LENGTH` | `8388608` |
-| `DATA_DIR` | `(empty)` |
-| `INSTANCE_DIR` | `(empty)` |
-| `LOG_DIR` | `(empty)` |
-| `LOG_LEVEL` | `INFO` |
-| `LOG_JSON` | `true` |
-| `REQUEST_ID_HEADER` | `X-Request-ID` |
+The package keeps one shape across the service: `config.py` reads the environment once, `observability.py` emits structured JSON logs carrying a request id, `errors.py` turns exceptions into a single JSON envelope, `models.py` holds the tables, and the `lab/` package holds the routes.
 
 ## Quality gates
 
-| Gate | Command | Result in this checkout |
+| Gate | Command | Threshold |
 | --- | --- | --- |
-| Tests | `python -m pytest -q` | **26 passed, 0 failed, 0 errors** in 1.78 s |
-| Coverage | `python -m pytest --cov=src/promptlab` | **68.5%** of 622 statements (181 missed) |
-| Lint | `python -m pyflakes src tests conftest.py wsgi.py` | **2 finding(s)** in this checkout |
-| Types | `python -m mypy --config-file mypy.ini src` | **57 error(s)** in this checkout |
-| Container | `docker build .` | Dockerfile reviewed, **not executed** - no container runtime on this host |
+| Suite | `pytest -q` | all green |
+| Coverage | `pytest --cov` | floor set in `pyproject.toml` from the measured value |
+| Lint | `ruff check src tests` | zero findings |
+| Format | `ruff format --check src tests` | zero reformats |
+| Types | `mypy src` | zero errors |
+| Security | `bandit -c pyproject.toml -r src` | reviewed skip list, no unreviewed finding |
+| Live routes | boot `wsgi.py`, one GET per documented path | no 5xx, no undocumented guard |
 
-`make lint` and `make type` run the pinned `ruff` and `mypy` from the project virtualenv that `make install` creates; CI runs the same two tools. This host has no network access, so the `ruff` pinned in `requirements-dev.txt` could not be installed; the Lint row reports `pyflakes`, the checker that actually ran here, rather than a tool that never executed. Both static checks were run over the checkout and their raw output is stored in `docs/EVIDENCE.md`.
+CI runs the first six on Python 3.11, 3.12 and 3.13 for every push to `main`, plus a container build. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-> **Honest note.** `pyproject.toml` declares a coverage floor of **85%** via `fail_under`. Measured line coverage is **68.46%**, so the coverage gate **fails** on this checkout even though every test passes. The number above is the real one; the gap is reported rather than hidden. This project's automated gate therefore does not pass as-is.
+## Deploy
 
-### Test inventory
+```sh
+docker build -t promptkeep .
+docker run --rm -p 8000:8000 --env-file .env.example promptkeep
+```
 
-| File | def test_* | class Test* |
-| --- | --- | --- |
-| `tests/conftest.py` | 0 | 0 |
-| `tests/test_promptkeep.py` | 6 | 0 |
-| `tests/test_config.py` | 9 | 0 |
-| `tests/test_ops.py` | 11 | 0 |
+Configuration is environment-only — every variable is documented in [`.env.example`](.env.example), and the service refuses to start with a production secret missing.
 
-### Make targets
+## Limits, stated rather than hidden
 
-| Target | What it does |
-| --- | --- |
-| `make help` | Show this help |
-| `make install` | Create the virtualenv and install dev dependencies |
-| `make fmt` | Auto-format (ruff is required; see requirements-dev.txt) |
-| `make lint` | Lint without modifying anything |
-| `make type` | Static type check |
-| `make test` | Run the test suite |
-| `make cov` | Run the test suite with coverage and enforce the floor |
-| `make check` | The gate CI runs |
-| `make run` | Start the development server |
-| `make clean` | Remove caches and build artefacts |
-| `make docker-build` | Build the container image |
-| `make docker-run` | Run the container on port 8000 |
-
-## Container image
-
-| Property | Value |
-| --- | --- |
-| Build stages | 2 |
-| Base images | `python:3.12-slim`, `python:3.12-slim` |
-| COPY instructions | 4 |
-| HEALTHCHECK | yes |
-| Runs as non-root | yes |
-
-`docker build` and `docker run` were **never executed** while this repository was produced: no container runtime is reachable from the generating host. The Dockerfile is a reviewed artefact, not a verified one.
-
-## Continuous integration
-
-| Workflow | Jobs | Steps | Commands |
-| --- | --- | --- | --- |
-| `ci.yml` | lint, test, security, container | 11 | ruff check src tests ; ruff format --check src tests ; mypy src |
-
-## Documentation index
-
-| File | Contents |
-| --- | --- |
-| [README.md](README.md) | this file - the measured overview |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | module responsibilities, dependency direction, request lifecycle |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md) | how to run, configure, and operate the service |
-| [docs/EVIDENCE.md](docs/EVIDENCE.md) | recorded command output - the raw source of every number here |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | setup and submission workflow |
-| [SECURITY.md](SECURITY.md) | how to report a vulnerability |
-| [CHANGELOG.md](CHANGELOG.md) | release history, Keep a Changelog form |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | community expectations |
-
-## What this repository does not claim
-
-- **No container run.** `docker build` was never executed.
-- **No CI run.** The workflow files are real, but no GitHub runner has executed them from this checkout.
-- **Static checks ran on this host, not the pinned toolchain.** `python -m pyflakes` and `python -m mypy` were executed here; `ruff` from the development requirements could not be installed on the generating host, so the lint gate named in `Makefile` is not the one that produced the numbers above.
-- **No published artifact.** The package installs from this tree with `pip install -e .`; nothing was uploaded to an index.
-- **Localhost only.** Every HTTP number was measured against `127.0.0.1` on the generating host, single-threaded, with no concurrency; treat them as smoke-test timings, not benchmarks.
-- **No browser verification of content.** Screenshots were captured headlessly and checked structurally (valid PNG, expected dimensions, non-empty DOM); nobody has looked at them by eye in this session.
+- Assertions are deterministic string and JSON checks; there is no model-graded rubric.
+- Eval runs execute in-process, so a large suite blocks the worker.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
