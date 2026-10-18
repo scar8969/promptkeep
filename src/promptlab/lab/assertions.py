@@ -1,4 +1,6 @@
-import re, json
+import json
+import re
+
 
 def check(output, assertion):
     t = assertion.get("type")
