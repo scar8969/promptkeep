@@ -1,3 +1,5 @@
+from typing import Any
+
 from flask import Blueprint, jsonify, request
 
 from ..models import EvalRun, Prompt, Result, Version, db
@@ -61,7 +63,7 @@ def start_eval():
 def eval_result(rid):
     run = EvalRun.query.get_or_404(rid)
     results = Result.query.filter_by(run_id=rid).all()
-    by_model = {}
+    by_model: dict[str, Any] = {}
     for r in results:
         m = by_model.setdefault(r.model, {"pass": 0, "total": 0, "cost": 0.0, "latency": 0.0})
         m["total"] += 1

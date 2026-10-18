@@ -10,6 +10,8 @@ the JSON route POST /api/evals where a caller has opted into waiting for it.
 The HTML "queue eval" form only records an EvalRun row.
 """
 
+from typing import Any
+
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 
 from . import paths
@@ -118,7 +120,7 @@ def build_app():
     def run_detail(rid):
         run = EvalRun.query.get_or_404(rid)
         results = Result.query.filter_by(run_id=rid).all()
-        by_model = {}
+        by_model: dict[str, Any] = {}
         for r in results:
             m = by_model.setdefault(
                 r.model or "-", {"pass": 0, "total": 0, "cost": 0.0, "latency": 0.0}
