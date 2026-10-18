@@ -1,6 +1,6 @@
 # Architecture -- Promptlab
 
-B10 promptlab skeleton — LLM prompt manager + eval.
+B10 promptlab service — LLM prompt manager + eval.
 
 This document explains how the service is put together, why the seams sit where
 they do, and what breaks first under load.
@@ -9,7 +9,7 @@ they do, and what breaks first under load.
 
 ## 1. Context
 
-b10_promptlab is a single-process Flask service. It owns its own database (SQLite by
+promptkeep is a single-process Flask service. It owns its own database (SQLite by
 default, any SQLAlchemy-supported backend via `DATABASE_URL`) and is deployed
 behind a reverse proxy or an orchestrator.
 
@@ -76,7 +76,7 @@ flowchart TB
 | `templates/index.html` | asset |
 | `templates/run.html` | asset |
 | `templates/runs.html` | asset |
-| `tests/test_b10_promptlab.py` | module |
+| `tests/test_promptkeep.py` | module |
 | `_app.py` | asset |
 
 ---
@@ -139,10 +139,10 @@ writable lives under `/app`.
 
 | Table | Owner |
 | --- | --- |
-| `prompts` | owned by `b10_promptlab` |
-| `versions` | owned by `b10_promptlab` |
-| `eval_runs` | owned by `b10_promptlab` |
-| `results` | owned by `b10_promptlab` |
+| `prompts` | owned by `promptkeep` |
+| `versions` | owned by `promptkeep` |
+| `eval_runs` | owned by `promptkeep` |
+| `results` | owned by `promptkeep` |
 
 Tables are created by the application's own bootstrap on first use. No migration
 tool is wired in; the schema is additive, and the service tolerates a missing or

@@ -34,7 +34,7 @@ RUN groupadd --system --gid 1001 app \
 WORKDIR /app
 
 COPY --from=builder /wheels /wheels
-RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels b10-promptlab \
+RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels promptkeep \
  && rm -rf /wheels \
  && mkdir -p /var/lib/promptlab/instance /var/lib/promptlab/log \
  && chown -R app:app /var/lib/promptlab /app

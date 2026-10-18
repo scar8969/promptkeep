@@ -1,4 +1,4 @@
-"""B10 promptlab — tests. Run: pytest test_b10_promptlab.py"""
+"""B10 promptlab — tests. Run: pytest test_promptkeep.py"""
 import sys, os
 
 import pytest

@@ -3,13 +3,13 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "b10-promptlab"
+name = "promptkeep"
 version = "0.1.0"
-description = "B10 promptlab skeleton — LLM prompt manager + eval."
+description = "Prompt manager with versioning and eval: keep every revision, run evals, compare scores."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "project-skeletons maintainers" }]
+authors = [{ name = "Priyanshu Rout" }]
 keywords = ["flask", "service", "promptlab"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -46,7 +46,7 @@ Documentation = "https://example.invalid/promptlab/docs"
 Issues = "https://example.invalid/promptlab/issues"
 
 [project.scripts]
-b10-promptlab = "promptlab.cli:main"
+promptkeep = "promptlab.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
