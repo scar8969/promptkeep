@@ -4,7 +4,7 @@ Every line below was produced by a command run against this exact checkout, on t
 
 | | |
 | --- | --- |
-| Generated | 2026-10-19 02:57 |
+| Generated | 2026-10-19 09:40 |
 | Python | 3.14.7 |
 | Platform | Windows 11 |
 
@@ -15,7 +15,7 @@ python -m pytest -q
 ```
 
 - exit code **0**
-- 26 passed in 1.22s
+- 26 passed in 0.92s
 
 ## Static gates
 
@@ -36,6 +36,18 @@ The application was imported through `wsgi.py` and each GET path declared in `op
 | 404 | `/api/evals/1` | 51 | application/json |
 
 2 paths walked, 0 of them raised or answered 5xx.
+
+## CLI
+
+```
+usage: promptlab [-h] {run} ...
+
+positional arguments:
+  {run}
+
+options:
+  -h, --help  show this help message and exit
+```
 
 ## Screenshots
 
