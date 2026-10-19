@@ -1,6 +1,6 @@
-from datetime import datetime
-
 from flask_sqlalchemy import SQLAlchemy
+
+from .clock import utcnow
 
 db = SQLAlchemy()
 
@@ -10,7 +10,7 @@ class Prompt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     current_version = db.Column(db.Integer, default=1)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
 
 class Version(db.Model):
@@ -20,7 +20,7 @@ class Version(db.Model):
     version = db.Column(db.Integer, default=1)
     template = db.Column(db.Text, default="")
     vars_json = db.Column(db.Text, default="[]")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
 
 class EvalRun(db.Model):
@@ -30,7 +30,7 @@ class EvalRun(db.Model):
     version = db.Column(db.Integer, default=1)
     models_json = db.Column(db.Text, default="[]")
     status = db.Column(db.String(16), default="running")
-    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime, default=utcnow)
 
 
 class Result(db.Model):
